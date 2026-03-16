@@ -92,7 +92,8 @@ Open Claude Desktop again.
 
 You should now see ticket-booking-mcp available in the Connectors section.
 
-![alt text](image.png)
+<img width="1191" height="387" alt="image" src="https://github.com/user-attachments/assets/797f89aa-f5cc-47a9-ac38-3cd6c5b340b9" />
+
 
 
 ## Available Tools
