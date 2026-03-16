@@ -51,11 +51,13 @@ npx @modelcontextprotocol/inspector
 
 The server auto-creates `train_booking.db` and seeds it with sample data (6 trains, 5 stations, schedules, and fare classes) on first run.
 
-## Connecting to Claude Code
+## Connecting to Claude Desktop
 
-### Option A: Project-level config (recommended)
+Navigate to the Claude Desktop configuration file:
 
-Create a `.mcp.json` file in your project root:
+"C:\Users\XXXX\AppData\Roaming\Claude\claude_desktop_config.json"
+
+Open the **`claude_desktop_config.json`** file and add the following configuration:
 
 ```json
 {
@@ -77,28 +79,21 @@ Create a `.mcp.json` file in your project root:
 
 > **Important:** Replace `/absolute/path/to/Ticket-Booking-MCP` with the actual absolute path to this project on your machine. On Windows use `\\` as path separators (e.g. `C:\\MyRepos\\Ticket-Booking-MCP`).
 
-### Option B: Global config
-
-To make the server available in all your Claude Code sessions:
-
-```bash
-claude mcp add ticket_booking -- uv --directory /absolute/path/to/Ticket-Booking-MCP run fastmcp run main.py
-```
 
 ### Verify the connection
 
-After configuring, start Claude Code in the project directory:
+After updating the configuration:
 
-```bash
-claude
-```
+Restart Claude Desktop.
 
-Then ask Claude to search trains or book a ticket:
+It is recommended to fully close Claude from Task Manager to ensure the configuration reloads properly.
 
-```
-> show me trains from New Delhi to Mumbai on 2025-04-15
-> book a ticket on Rajdhani Express for Rahul, age 28
-```
+Open Claude Desktop again.
+
+You should now see ticket-booking-mcp available in the Connectors section.
+
+![alt text](image.png)
+
 
 ## Available Tools
 
