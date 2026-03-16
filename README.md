@@ -25,28 +25,29 @@ cd Ticket-Booking-MCP
 **Using uv (recommended):**
 
 ```bash
-uv sync
+pip install uv
+
+uv init
+
+uv add fastmcp
 ```
 
 This reads `pyproject.toml` and creates a virtual environment with all dependencies automatically.
 
-**Using pip (alternative):**
-
-```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
-
-pip install -r requirement.txt
-```
 
 ### 3. Test the server locally
 
 ```bash
 uv run fastmcp run main.py
 ```
+
+## for debugging
+
+```bash
+npx @modelcontextprotocol/inspector
+```
+
+
 
 The server auto-creates `train_booking.db` and seeds it with sample data (6 trains, 5 stations, schedules, and fare classes) on first run.
 
