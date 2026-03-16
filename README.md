@@ -1,179 +1,183 @@
-# Bhaiya & Company — Voice Ticket Booking
+# Ticket-Booking-MCP
 
-A real-time speech-to-speech train ticket booking app powered by **Amazon Nova Sonic** and custom **MCP servers**.
+An MCP (Model Context Protocol) server that connects Claude to a local SQLite database, providing a complete train ticket booking system — search trains, book tickets, check PNR status, cancel bookings, and more — all through natural language.
 
-Users speak in **English, Hindi, French, or German** to search trains, book tickets, process payment, and receive an email confirmation — without typing a single character.
+Built with [FastMCP](https://github.com/jlowin/fastmcp) and designed to work with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
----
-
-## Architecture
-
-```
-┌─────────────┐    WebSocket     ┌─────────────────────────────┐
-│   React     │ ←──────────────→ │  FastAPI Backend            │
-│  Frontend   │  audio + JSON    │  (nova_sonic.py + main.py)  │
-└─────────────┘                  └────────────┬────────────────┘
-                                              │ MCP SSE
-                              ┌───────────────┴───────────────┐
-                              │                               │
-                   ┌──────────┴──────────┐   ┌───────────────┴──────────┐
-                   │ ticket_booking MCP  │   │      gmail MCP           │
-                   │   (port 8001)       │   │    (port 8002)           │
-                   │                     │   │                          │
-                   │ • search_trains     │   │ • send_booking_email     │
-                   │ • book_ticket       │   │ • send_test_email        │
-                   │ • process_payment   │   └──────────────────────────┘
-                   │ • get_confirmation  │
-                   └─────────────────────┘
-                              │
-                   ┌──────────┴──────────┐
-                   │  AWS Bedrock        │
-                   │  Nova Sonic         │
-                   │  amazon.nova-sonic- │
-                   │  v1:0               │
-                   └─────────────────────┘
-```
-
----
-
-## Quick Start
-
-### Prerequisites
+## Prerequisites
 
 - Python 3.10+
-- Node.js 18+
-- `pip install uv` (then use `uv` for MCP servers)
-- AWS account with Bedrock access (Nova Sonic model enabled in `us-east-1`)
-- Google Cloud project with Gmail API enabled
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
 
----
+> **Note:** No external database setup required — the server uses SQLite and auto-creates the database on first run.
 
-### 1. Setup MCP Servers
+## Setup
 
-```bash
-# Ticket Booking MCP
-cd mcp/ticket_booking
-uv init
-uv add fastmcp pydantic
-# Run on port 8001:
-uv run fastmcp run booking_mcp_main.py --transport sse --port 8001
-```
+### 1. Clone the repository
 
 ```bash
-# Gmail MCP
-cd mcp/gmail
-uv init
-uv add fastmcp google-api-python-client google-auth-oauthlib google-auth-httplib2
-# Place credentials.json from Google Cloud Console here
-# Run on port 8002:
-uv run fastmcp run gmail_mcp_main.py --transport sse --port 8002
+git clone https://github.com/your-username/Ticket-Booking-MCP.git
+cd Ticket-Booking-MCP
 ```
 
-#### Gmail API Setup
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a project → Enable **Gmail API**
-3. Create OAuth credentials → **Desktop app** type → Download `credentials.json`
-4. Place `credentials.json` in `mcp/gmail/`
-5. First run will open a browser for OAuth consent → generates `token.json`
+### 2. Install dependencies
 
----
-
-### 2. Setup Backend
+**Using uv (recommended):**
 
 ```bash
-cd backend
-cp .env.example .env
-# Fill in your AWS credentials in .env
-
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+uv sync
 ```
 
-**`backend/.env`:**
-```
-AWS_ACCESS_KEY_ID=your_key
-AWS_SECRET_ACCESS_KEY=your_secret
-AWS_REGION=us-east-1
-MCP_BOOKING_URL=http://localhost:8001/sse
-MCP_GMAIL_URL=http://localhost:8002/sse
-```
+This reads `pyproject.toml` and creates a virtual environment with all dependencies automatically.
 
----
-
-### 3. Setup Frontend
+**Using pip (alternative):**
 
 ```bash
-cd frontend
-npm install
-npm run dev
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS/Linux
+source .venv/bin/activate
+
+pip install -r requirement.txt
 ```
 
-Open [http://localhost:5173](http://localhost:5173)
-
----
-
-### Run Order (4 terminals)
+### 3. Test the server locally
 
 ```bash
-# Terminal 1 — Ticket Booking MCP
-cd mcp/ticket_booking && uv run fastmcp run booking_mcp_main.py --transport sse --port 8001
-
-# Terminal 2 — Gmail MCP
-cd mcp/gmail && uv run fastmcp run gmail_mcp_main.py --transport sse --port 8002
-
-# Terminal 3 — Backend
-cd backend && uvicorn main:app --reload --port 8000
-
-# Terminal 4 — Frontend
-cd frontend && npm run dev
+uv run fastmcp run main.py
 ```
 
----
+The server auto-creates `train_booking.db` and seeds it with sample data (6 trains, 5 stations, schedules, and fare classes) on first run.
 
-## Voice Commands (Examples)
+## Connecting to Claude Code
 
-| Language | Example |
-|----------|---------|
-| English | *"I want to go from Delhi to Mumbai on 15 March for 2 people"* |
-| Hindi | *"मैं दिल्ली से मुंबई जाना चाहता हूँ, 15 मार्च को, 2 लोग"* |
-| French | *"Je veux aller de Delhi à Mumbai le 15 mars pour 2 personnes"* |
-| German | *"Ich möchte am 15. März mit 2 Personen von Delhi nach Mumbai reisen"* |
+### Option A: Project-level config (recommended)
 
-If you provide all required info at once (from, to, date, passengers) → trains are searched immediately.
-If any field is missing → the AI asks a follow-up question in the same language.
+Create a `.mcp.json` file in your project root:
 
----
+```json
+{
+  "mcpServers": {
+    "ticket_booking": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/Ticket-Booking-MCP",
+        "run",
+        "fastmcp",
+        "run",
+        "main.py"
+      ]
+    }
+  }
+}
+```
 
-## Available Train Routes
+> **Important:** Replace `/absolute/path/to/Ticket-Booking-MCP` with the actual absolute path to this project on your machine. On Windows use `\\` as path separators (e.g. `C:\\MyRepos\\Ticket-Booking-MCP`).
 
-- Delhi ↔ Mumbai (Rajdhani Express, Duronto Express)
-- Delhi ↔ Lucknow (Shatabdi, Lucknow Mail)
-- Delhi ↔ Kolkata (Poorva Express)
-- Delhi ↔ Jaipur (Ajmer Shatabdi)
-- Delhi ↔ Bangalore (Rajdhani Express)
-- Mumbai → Delhi (Mumbai Rajdhani)
+### Option B: Global config
 
----
+To make the server available in all your Claude Code sessions:
 
-## Voice Languages & Voices
+```bash
+claude mcp add ticket_booking -- uv --directory /absolute/path/to/Ticket-Booking-MCP run fastmcp run main.py
+```
 
-| Language | Code | Voice |
-|----------|------|-------|
-| English (US) | en | tiffany |
-| Hindi | hi | kiara |
-| French | fr | ambre |
-| German | de | tina |
+### Verify the connection
 
----
+After configuring, start Claude Code in the project directory:
 
-## Tech Stack
+```bash
+claude
+```
 
-| Layer | Technology |
-|-------|-----------|
-| AI Voice | Amazon Nova Sonic (Bedrock) |
-| Tool Protocol | MCP (FastMCP) |
-| Backend | Python FastAPI + WebSocket |
-| Frontend | React 19 + Vite + Tailwind CSS |
-| Animations | Framer Motion |
-| Icons | Lucide React |
-| Email | Gmail API (OAuth2) |
+Then ask Claude to search trains or book a ticket:
+
+```
+> show me trains from New Delhi to Mumbai on 2025-04-15
+> book a ticket on Rajdhani Express for Rahul, age 28
+```
+
+## Available Tools
+
+### Booking Tools
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `search_trains` | Search available trains between two stations | `source`, `destination`, `date` |
+| `book_ticket` | Book train tickets | `train_number`, `passenger_name`, `age`, `source`, `destination`, `date`, `class_type`, `num_seats` |
+| `cancel_ticket` | Cancel a booked ticket with 80% refund | `pnr` |
+| `check_pnr_status` | Check booking status using PNR | `pnr` |
+
+### Information Tools
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `get_all_stations` | List all available stations | none |
+| `get_train_schedule` | Get complete schedule and stops of a train | `train_number` |
+| `list_all_bookings` | List all bookings with optional status filter | `status` (optional) |
+| `list_bookings_by_passenger` | List bookings for a specific passenger | `passenger_name` |
+
+## Database Schema
+
+The server uses SQLite with 5 tables, auto-created and seeded on startup:
+
+```
+stations        - 5 stations (New Delhi, Prayagraj, Ballia, Mumbai, Dehradun)
+trains          - 6 trains (Rajdhani, Shatabdi, Doon, Pushpak, Ganga Kaveri, Dehradun Express)
+train_classes   - Fare and seat info per train per class (1A, 2A, 3A, SL, CC, EC, 2S)
+train_schedule  - Departure/arrival times for each stop
+bookings        - Ticket bookings with PNR, status, fare, and cancellation info
+```
+
+## Sample Trains
+
+| Train No. | Name | Route |
+|-----------|------|-------|
+| 12301 | Rajdhani Express | New Delhi → Prayagraj → Mumbai |
+| 12302 | Shatabdi Express | New Delhi → Dehradun |
+| 13009 | Doon Express | Dehradun → Prayagraj → Ballia |
+| 12533 | Pushpak Express | Mumbai → Prayagraj → Ballia → New Delhi |
+| 15004 | Ganga Kaveri Express | New Delhi → Prayagraj → Ballia → Mumbai |
+| 19019 | Dehradun Express | Mumbai → New Delhi → Dehradun |
+
+## Example Prompts for Claude
+
+```
+# Searching Trains
+"Show me trains from New Delhi to Mumbai on 2025-04-15"
+"Find trains between Prayagraj and Ballia for tomorrow"
+
+# Booking Tickets
+"Book a 3A ticket on Rajdhani Express for Rahul, age 28, from New Delhi to Mumbai on 2025-04-15"
+"Book 2 sleeper class seats on Pushpak Express for Priya, age 32"
+
+# PNR & Status
+"Check PNR status for PNR1001"
+"Show me all confirmed bookings"
+
+# Cancellations
+"Cancel ticket PNR1001"
+
+# Train Info
+"Show the schedule for train 12301"
+"What stations are available?"
+"List all bookings for passenger Rahul"
+```
+
+## Project Structure
+
+```
+Ticket-Booking-MCP/
+├── main.py              # MCP server with all 8 tool definitions
+├── pyproject.toml       # Project metadata and dependencies (uv)
+├── requirement.txt      # Dependencies (pip)
+├── train_booking.db     # SQLite database (auto-created)
+├── .mcp.json            # Claude Code MCP configuration
+└── README.md
+```
+
+## License
+
+MIT
