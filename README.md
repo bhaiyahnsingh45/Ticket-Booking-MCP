@@ -2,7 +2,7 @@
 
 An MCP (Model Context Protocol) server that connects Claude to a local SQLite database, providing a complete train ticket booking system — search trains, book tickets, check PNR status, cancel bookings, and more — all through natural language.
 
-Built with [FastMCP](https://github.com/jlowin/fastmcp) and designed to work with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+Built with [FastMCP](https://github.com/jlowin/fastmcp) and designed to work with Claude Desktop
 
 ## Prerequisites
 
